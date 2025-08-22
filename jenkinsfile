@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // Platform: Jenkins server (pulls from Git)
+                git url: 'https://github.com/<your-username>/add-calculator-c.git', branch: 'main'
+            }
+        }
+        stage('Compile') {
+            steps {
+                // Platform: Jenkins Windows agent (MinGW/TDM-GCC in PATH)
+                bat 'gcc add.c -o add.exe'
+                bat 'gcc test_add.c -o test_add.exe'
+            }
+        }
+        stage('Run Tests') {
+            steps {
+                // Platform: Jenkins Windows agent
+                bat 'test_add.exe'
+            }
+        }
+        stage('Demo Run') {
+            steps {
+                // Platform: Jenkins Windows agent
+                // Either of the following works; use one:
+                // 1) CMD pipe:
+                bat 'echo 10 20 | add.exe'
+                // 2) PowerShell:
+                // powershell -Command "Write-Output '10 20' | .\\add.exe"
+            }
+        }
+    }
+
+    post {
+        always {
+            archiveArtifacts artifacts: 'add*.exe test_add*.exe', fingerprint: true
+        }
+        success {
+            echo '✅ Add Calculator Pipeline Successful!'
+        }
+        failure {
+            echo '❌ Build Failed'
+        }
+    }
+}
